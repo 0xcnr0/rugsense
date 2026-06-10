@@ -29,7 +29,7 @@ Once published to npm, no clone needed:
 ```
 (Claude Desktop config: `~/Library/Application Support/Claude/claude_desktop_config.json`.)
 
-Or via **Smithery** (one click, see `smithery.yaml`): https://smithery.ai
+Or via **Smithery** (one click, see `smithery.yaml` at the repo root): https://smithery.ai
 
 ## Install (from source — repo clone)
 ```json
