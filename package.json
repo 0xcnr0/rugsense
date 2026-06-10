@@ -1,0 +1,35 @@
+{
+  "name": "base-launch-radar",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agent-native scored launch intelligence for Base, sold per-call over x402 (USDC).",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "score:demo": "tsx scripts/score-demo.ts",
+    "test": "tsx scripts/test.ts",
+    "mcp": "tsx mcp/server.ts",
+    "daily": "tsx scripts/daily-content.ts"
+  },
+  "dependencies": {
+    "@coinbase/x402": "^2.1.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@x402/evm": "^2.14.0",
+    "@x402/extensions": "^2.14.0",
+    "@x402/next": "^2.14.0",
+    "next": "^16.2.7",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@x402/fetch": "^2.14.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

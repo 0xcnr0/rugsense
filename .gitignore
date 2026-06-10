@@ -1,0 +1,17 @@
+node_modules/
+.next/
+out/
+.env
+.env.local
+*.log
+.DS_Store
+.vercel
+next-env.d.ts
+
+tsconfig.tsbuildinfo
+
+# MCP package build output (built on publish via prepublishOnly)
+mcp/dist/
+
+# Local Claude Code settings (per-user, never share)
+.claude/settings.local.json

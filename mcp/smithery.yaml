@@ -1,0 +1,29 @@
+# Smithery manifest for the RugSense MCP server (stdio).
+# Lets agents install RugSense as an MCP tool in one click from smithery.ai.
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    required:
+      - buyerPrivateKey
+    properties:
+      buyerPrivateKey:
+        type: string
+        title: Base wallet private key
+        description: >-
+          Private key of a Base wallet funded with a little USDC. RugSense is paid
+          per call over x402 ($0.03 per token check); this wallet pays automatically.
+      radarUrl:
+        type: string
+        title: Radar base URL
+        default: https://rugsense.xyz
+        description: Override the RugSense base URL (advanced; defaults to production).
+  commandFunction: |-
+    (config) => ({
+      command: 'npx',
+      args: ['-y', 'rugsense-mcp'],
+      env: {
+        BUYER_PRIVATE_KEY: config.buyerPrivateKey,
+        ...(config.radarUrl ? { RADAR_URL: config.radarUrl + '/api/launches/latest' } : {})
+      }
+    })

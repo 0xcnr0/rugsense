@@ -1,0 +1,44 @@
+{
+  "name": "rugsense-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for RugSense — score freshly-launched Base tokens (rug/honeypot risk → AVOID/WATCH/HOT) over x402. Tools: get_base_launches, check_base_token, check_base_tokens_batch.",
+  "type": "module",
+  "bin": {
+    "rugsense-mcp": "dist/server.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "x402",
+    "base",
+    "rug-check",
+    "honeypot",
+    "token-safety",
+    "ai-agents",
+    "agentkit",
+    "onchain"
+  ],
+  "homepage": "https://rugsense.xyz",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@x402/evm": "^2.14.0",
+    "@x402/fetch": "^2.14.0",
+    "viem": "^2.21.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "RugSense",
+    "version": "1.0.0",
+    "description": "Rug/honeypot risk + scored intelligence for freshly-launched Base tokens. Each token gets one machine-actionable AVOID/WATCH/HOT decision with a 0-100 composite, a calibrated safetyConfidence, and transparent per-signal checks[] — deterministic, no LLM. Signals: honeypot + buy/sell tax (trade simulation), mintable/blacklist/pausable + ownership, owner-mutable trade-control latent-honeypot, holder concentration, sniper/bundle supply, funding-source wallet clusters, transaction-graph centrality, serial-deployer reputation, a repeat-offender wallet denylist built from rugs we've caught, and LP burn/lock + duration (Uniswap v2 + v3). Each call is paid per-request over x402 v2 (USDC on Base) — no API keys, no signup. An unpaid request returns HTTP 402 with an x402 v2 payment challenge (PAYMENT-REQUIRED header); pay and retry. See docs/INTEGRATE.md.",
+    "contact": { "url": "https://rugsense.xyz" }
+  },
+  "servers": [{ "url": "https://rugsense.xyz" }],
+  "paths": {
+    "/api/launches/latest": {
+      "get": {
+        "operationId": "getLatestLaunches",
+        "summary": "Latest scored Base token launches (ranked)",
+        "description": "Returns freshly-launched Base tokens, each scored for safety + momentum into an AVOID/WATCH/HOT decision, sorted by composite. Discoverable on x402 Bazaar / Agentic.Market.",
+        "parameters": [
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 }, "description": "Max launches" },
+          { "name": "tier", "in": "query", "schema": { "type": "string", "enum": ["HOT", "WATCH", "AVOID"] }, "description": "Filter by decision tier" },
+          { "name": "minSafety", "in": "query", "schema": { "type": "integer", "minimum": 0, "maximum": 100 }, "description": "Only launches with safetyScore >= this" }
+        ],
+        "responses": {
+          "200": { "description": "Scored launches", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LaunchesResponse" } } } },
+          "402": { "$ref": "#/components/responses/PaymentRequired" }
+        }
+      }
+    },
+    "/api/token/{address}": {
+      "get": {
+        "operationId": "scoreToken",
+        "summary": "Score one specific Base token",
+        "description": "The 'is THIS token safe?' check. Returns the full scored assessment for a given Base token address. Settles only on success — an invalid address (400) or a token with no pool (404) is not charged.",
+        "parameters": [
+          { "name": "address", "in": "path", "required": true, "schema": { "type": "string", "pattern": "^0x[a-fA-F0-9]{40}$" }, "description": "Base token contract address" }
+        ],
+        "responses": {
+          "200": { "description": "Scored token", "content": { "application/json": { "schema": { "type": "object", "properties": { "chain": { "type": "string" }, "generatedAt": { "type": "string" }, "token": { "$ref": "#/components/schemas/ScoredLaunch" }, "notes": { "type": "array", "items": { "type": "string" } } } } } } },
+          "400": { "description": "Invalid address" },
+          "402": { "$ref": "#/components/responses/PaymentRequired" },
+          "404": { "description": "No DEX pair found for this token on Base" }
+        }
+      }
+    },
+    "/api/tokens/batch": {
+      "get": {
+        "operationId": "scoreTokensBatch",
+        "summary": "Batch-score up to 20 Base tokens in one call",
+        "description": "Pre-screen a watchlist: score many Base tokens at once, each with its AVOID/WATCH/HOT decision + composite + per-signal checks. Feed-grade scoring (cheaper per-token than individual /api/token calls; for the Etherscan-deep deployer/cluster verify on a single token use /api/token/{address}). Flat $0.10/call for up to 20 tokens. Charged only if at least one address resolves to a Base pool.",
+        "parameters": [
+          { "name": "addresses", "in": "query", "required": true, "schema": { "type": "string" }, "description": "Comma-separated Base token addresses (1-20), e.g. 0xabc...,0xdef..." }
+        ],
+        "responses": {
+          "200": { "description": "Per-token scored results", "content": { "application/json": { "schema": { "type": "object", "properties": { "chain": { "type": "string" }, "generatedAt": { "type": "string" }, "count": { "type": "integer" }, "requested": { "type": "integer" }, "results": { "type": "array", "items": { "type": "object", "properties": { "address": { "type": "string" }, "scored": { "oneOf": [{ "$ref": "#/components/schemas/ScoredLaunch" }, { "type": "null" }] }, "error": { "type": "string" } } } } } } } } },
+          "400": { "description": "No valid address in the request" },
+          "402": { "$ref": "#/components/responses/PaymentRequired" },
+          "404": { "description": "None of the addresses resolved to a Base pool" }
+        }
+      }
+    }
+  },
+  "components": {
+    "responses": {
+      "PaymentRequired": {
+        "description": "x402 v2 payment challenge. The PaymentRequired payload is in the base64 PAYMENT-REQUIRED response header (scheme exact, network eip155:8453, USDC, $0.03). Pay with an x402 client and retry.",
+        "headers": { "PAYMENT-REQUIRED": { "schema": { "type": "string" }, "description": "Base64-encoded x402 v2 PaymentRequired payload" } }
+      }
+    },
+    "schemas": {
+      "Tier": { "type": "string", "enum": ["HOT", "WATCH", "AVOID"] },
+      "Flag": { "type": "object", "properties": { "code": { "type": "string" }, "label": { "type": "string" }, "severity": { "type": "string", "enum": ["info", "warn", "danger"] } } },
+      "SafetyCheck": { "type": "object", "properties": { "key": { "type": "string" }, "status": { "type": "string", "enum": ["pass", "warn", "fail", "unknown"] }, "detail": { "type": "string" } } },
+      "ScoredLaunch": {
+        "type": "object",
+        "properties": {
+          "address": { "type": "string", "description": "Token contract address" },
+          "symbol": { "type": "string" },
+          "name": { "type": "string" },
+          "chain": { "type": "string" },
+          "dex": { "type": "string" },
+          "pairAddress": { "type": "string" },
+          "ageMinutes": { "type": ["number", "null"] },
+          "priceUsd": { "type": ["number", "null"] },
+          "liquidityUsd": { "type": ["number", "null"] },
+          "tier": { "$ref": "#/components/schemas/Tier" },
+          "composite": { "type": "number", "description": "0-100, safety-gated — the number to gate on" },
+          "safetyScore": { "type": "number" },
+          "momentumScore": { "type": "number" },
+          "safetyConfidence": { "type": "number", "description": "0-100; share of safety checks with a definitive result" },
+          "safetyPartial": { "type": "boolean", "description": "true → key checks could not run; treat with caution" },
+          "checks": { "type": "array", "items": { "$ref": "#/components/schemas/SafetyCheck" } },
+          "safety": { "type": "object", "description": "Raw safety facts: honeypot, buyTax, sellTax, verified, proxy, mintable, ownershipRenounced, top10Pct, whaleCount, lpSecuredPct, lpLockType, lpUnlocksInDays, sniperPct, firstBlockBuyers, fundingClusterSize, deployer, deployerDeployments, deployerAgeDays, deployerPriorTokens, deployerPriorRugged" },
+          "flags": { "type": "array", "items": { "$ref": "#/components/schemas/Flag" } }
+        }
+      },
+      "LaunchesResponse": {
+        "type": "object",
+        "properties": {
+          "chain": { "type": "string" },
+          "generatedAt": { "type": "string" },
+          "count": { "type": "integer" },
+          "notes": { "type": "array", "items": { "type": "string" } },
+          "launches": { "type": "array", "items": { "$ref": "#/components/schemas/ScoredLaunch" } }
+        }
+      }
+    }
+  }
+}
