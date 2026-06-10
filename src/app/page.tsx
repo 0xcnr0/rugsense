@@ -6,14 +6,17 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const tierColor: Record<Tier, string> = { HOT: "#16c784", WATCH: "#f5a623", AVOID: "#ea3943" };
-const C = { bg: "#0b0d12", card: "#11141b", line: "#1c212b", text: "#e6e8eb", dim: "#9aa0a6", faint: "#6b7280", accent: "#4f8cff" };
+const C = { bg: "#0b0d12", card: "#11141b", line: "#1c212b", text: "#e6e8eb", dim: "#9aa0a6", faint: "#6b7280", accent: "#4f8cff", green: "#16c784" };
 
-// Human-facing storefront (the "content = marketing" channel). Same scoring engine as
-// the paid agent API — humans browse the radar, agents pay per call over x402.
+const GH = "https://github.com/0xcnr0/rugsense";
+const NPM = "https://www.npmjs.com/package/rugsense-mcp";
+
+// Human-facing storefront (content = marketing). Same scoring engine as the paid
+// agent API — humans browse the radar, agents pay per call over x402.
 export default async function Home() {
   // Fast (DexScreener-only) scoring for the public teaser — keeps the page snappy.
-  // The full onchain safety assessment (honeypot/holder/LP + checks + confidence) is
-  // the paid API's value, not given away free here.
+  // The full onchain assessment (incl. deployer reputation + the proprietary
+  // repeat-offender denylist) is the paid API's value, not given away free here.
   const launches = scoreLaunches(await getRecentBaseLaunchPairs(15)).sort(
     (a, b) => b.composite - a.composite,
   );
@@ -21,42 +24,68 @@ export default async function Home() {
   launches.forEach((l) => (counts[l.tier] += 1));
 
   return (
-    <main style={{ maxWidth: 920, margin: "0 auto", padding: "40px 20px 64px" }}>
-      {/* Hero */}
-      <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
-        <h1 style={{ margin: 0, fontSize: 30 }}>RugSense</h1>
-        <span style={{ color: C.dim, fontSize: 13 }}>scored launch intelligence · live on Base · paid per call over x402</span>
-        <a href="/caught" style={{ color: C.accent, fontSize: 13, textDecoration: "none", marginLeft: "auto" }}>Rugs we caught →</a>
-      </div>
-      <p style={{ color: C.text, fontSize: 17, lineHeight: 1.5, maxWidth: 680, marginTop: 12 }}>
-        Every freshly-launched token, scored for <strong>safety</strong> and{" "}
-        <strong>momentum</strong> into one <strong>AVOID / WATCH / HOT</strong> decision —
-        so you (or your agent) skip the rugs and catch the real ones, in a single call.
-      </p>
-      <p style={{ color: C.dim, fontSize: 14, maxWidth: 680 }}>
-        Not a raw &ldquo;new pairs&rdquo; feed. A scored decision: honeypot &amp; tax simulation,
-        deployer reputation, sniper/bundle detection, wallet-cluster &amp; graph analysis, holder
-        concentration, and LP burn/lock with duration (v2 &amp; v3) — each launch ships a
-        transparent per-signal <code>checks[]</code> and a <code>safetyConfidence</code>.
-      </p>
+    <main style={{ maxWidth: 960, margin: "0 auto", padding: "28px 20px 64px" }}>
+      {/* Nav */}
+      <nav style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", marginBottom: 36 }}>
+        <span style={{ fontSize: 20, fontWeight: 800 }}>RugSense</span>
+        <span style={{ color: C.faint, fontSize: 12.5 }}>live on Base</span>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 16, fontSize: 13.5, flexWrap: "wrap" }}>
+          <a href="/caught" style={link}>Rugs we caught</a>
+          <a href="#agents" style={link}>For agents</a>
+          <a href="/openapi.json" style={link}>API</a>
+          <a href={NPM} style={link}>npm</a>
+          <a href={GH} style={link}>GitHub</a>
+        </div>
+      </nav>
 
-      {/* Tier summary */}
-      <div style={{ display: "flex", gap: 10, margin: "20px 0 8px" }}>
+      {/* Hero */}
+      <h1 style={{ margin: 0, fontSize: 38, lineHeight: 1.15, maxWidth: 760 }}>
+        Don&apos;t let your agent buy a fresh launch <span style={{ color: C.accent }}>blind</span>.
+      </h1>
+      <p style={{ color: C.text, fontSize: 18, lineHeight: 1.5, maxWidth: 700, marginTop: 16 }}>
+        RugSense scores every freshly-launched Base token into one machine-actionable{" "}
+        <strong style={{ color: tierColor.AVOID }}>AVOID</strong> /{" "}
+        <strong style={{ color: tierColor.WATCH }}>WATCH</strong> /{" "}
+        <strong style={{ color: tierColor.HOT }}>HOT</strong> decision your agent can gate on —
+        with a transparent per-signal breakdown. One x402 call. No keys, no signup.
+      </p>
+      <div style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
+        <a href="#agents" style={{ ...btn, background: C.accent, color: "#0b0d12", borderColor: C.accent }}>Add to your agent →</a>
+        <a href="/caught" style={btn}>See the rugs we caught</a>
+      </div>
+
+      {/* Why different */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 12, marginTop: 40 }}>
+        <Why title="One decision, not a toolbox">
+          Others hand you 19 tools or 30 disconnected checks. RugSense returns the single thing an
+          agent needs: a composite + <code>AVOID/WATCH/HOT</code> + calibrated confidence to{" "}
+          <code>if</code> on.
+        </Why>
+        <Why title="Deterministic & transparent">
+          No LLM, no hallucinations. Same input → same score, every time — with the per-signal{" "}
+          <code>checks[]</code> so you (and your users) see <em>why</em>.
+        </Why>
+        <Why title="A moat that compounds">
+          A proprietary repeat-offender wallet denylist, grown from rugs <em>we catch</em>. When a
+          deployer&apos;s prior tokens rugged, the next launch is flagged before it does.
+        </Why>
+      </div>
+
+      {/* Tier summary + live table */}
+      <h2 style={{ fontSize: 16, color: C.dim, margin: "44px 0 8px", fontWeight: 600 }}>
+        Live radar{" "}
+        <span style={{ color: C.faint, fontWeight: 400, fontSize: 13 }}>
+          — latest launches, quick view. Full onchain safety + deployer/reputation ships with the API.
+        </span>
+      </h2>
+      <div style={{ display: "flex", gap: 10, margin: "0 0 10px" }}>
         {(["HOT", "WATCH", "AVOID"] as Tier[]).map((t) => (
-          <div key={t} style={{ flex: 1, background: C.card, border: `1px solid ${C.line}`, borderRadius: 10, padding: "12px 14px" }}>
+          <div key={t} style={{ flex: 1, background: C.card, border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 14px" }}>
             <div style={{ color: tierColor[t], fontWeight: 700, fontSize: 13, letterSpacing: 0.5 }}>{t}</div>
             <div style={{ fontSize: 22, fontWeight: 700 }}>{counts[t]}</div>
           </div>
         ))}
       </div>
-
-      {/* Live table */}
-      <h2 style={{ fontSize: 16, color: C.dim, margin: "24px 0 8px", fontWeight: 600 }}>
-        Latest scored launches{" "}
-        <span style={{ color: C.faint, fontWeight: 400, fontSize: 13 }}>
-          — quick view; full onchain safety (honeypot/holder/LP + per-signal checks) ships with the API
-        </span>
-      </h2>
       {launches.length === 0 ? (
         <p style={{ color: C.dim }}>No launches resolved right now — try again shortly.</p>
       ) : (
@@ -77,40 +106,65 @@ export default async function Home() {
           </table>
         </div>
       )}
+      <p style={{ color: C.faint, fontSize: 12, marginTop: 8 }}>
+        Click any token for its full report. The teaser uses fast scoring; the API runs the deep
+        onchain assessment.
+      </p>
 
-      {/* For agents / developers */}
-      <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 12, padding: 20, marginTop: 28 }}>
-        <h2 style={{ margin: "0 0 8px", fontSize: 17 }}>For agents &amp; developers</h2>
+      {/* For agents */}
+      <div id="agents" style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 14, padding: 24, marginTop: 44 }}>
+        <h2 style={{ margin: "0 0 4px", fontSize: 20 }}>Add to your agent in one line</h2>
         <p style={{ color: C.dim, fontSize: 14, marginTop: 0 }}>
-          One x402 call returns the scored, ranked list. No API keys, no signup — your agent&apos;s
-          wallet pays <strong>$0.03 USDC</strong> per call on Base.
+          Drop the MCP server into Claude Desktop, Cursor, AgentKit or LangChain. Your agent&apos;s
+          wallet pays per call over x402 — no API keys, no signup.
         </p>
-        <pre style={{ background: C.bg, border: `1px solid ${C.line}`, borderRadius: 8, padding: 12, overflowX: "auto", fontSize: 12.5, color: C.text }}>
-{`GET /api/launches/latest?tier=HOT&minSafety=60   → ranked scored launches   $0.03
-GET /api/token/{address}                         → deep-score one token       $0.03
-GET /api/tokens/batch?addresses=0x..,0x..        → pre-screen up to 20 tokens  $0.10
-402 Payment Required (x402 v2) → pay USDC → data`}
+        <pre style={code}>
+{`{
+  "mcpServers": {
+    "rugsense": {
+      "command": "npx",
+      "args": ["-y", "rugsense-mcp"],
+      "env": { "BUYER_PRIVATE_KEY": "0x<a Base wallet with USDC>" }
+    }
+  }
+}`}
         </pre>
-        <p style={{ color: C.dim, fontSize: 13.5 }}>
-          Discoverable on the <span style={{ color: C.accent }}>x402 Bazaar / Agentic.Market</span>.
-          Drop-in <strong>MCP server</strong> gives any MCP client a <code>get_base_launches</code>{" "}
-          tool. Specs: <a href="/openapi.json" style={{ color: C.accent }}>/openapi.json</a>,{" "}
-          <code>docs/INTEGRATE.md</code>.
+        <p style={{ color: C.dim, fontSize: 13, margin: "10px 0 4px" }}>
+          Three tools: <code>get_base_launches</code> · <code>check_base_token</code> ·{" "}
+          <code>check_base_tokens_batch</code>. Or call the HTTP API directly:
+        </p>
+        <pre style={code}>
+{`GET /api/launches/latest?tier=HOT&minSafety=60   → ranked scored feed       $0.03
+GET /api/token/{address}                         → deep-score one token      $0.03
+GET /api/tokens/batch?addresses=0x..,0x..        → pre-screen up to 20        $0.10`}
+        </pre>
+        <p style={{ color: C.dim, fontSize: 13, margin: "10px 0 4px" }}>How an agent gates on it:</p>
+        <pre style={code}>
+{`const { token } = await (await pay(\`/api/token/\${addr}\`)).json();
+if (token.tier === "AVOID" || token.composite < 60) return skip();
+swap();  // only HOT/WATCH with enough confidence`}
+        </pre>
+        <p style={{ color: C.faint, fontSize: 13, marginTop: 12 }}>
+          Discoverable on the <span style={{ color: C.accent }}>x402 Bazaar / Agentic.Market</span> ·{" "}
+          <a href="/openapi.json" style={link}>OpenAPI</a> ·{" "}
+          <a href={NPM} style={link}>npm</a> ·{" "}
+          <a href={GH} style={link}>source</a>
         </p>
       </div>
 
       {/* How the score works */}
-      <div style={{ marginTop: 28 }}>
-        <h2 style={{ margin: "0 0 10px", fontSize: 17 }}>How the score works</h2>
-        <p style={{ color: C.dim, fontSize: 14, marginTop: 0 }}>
-          Deterministic, no LLM. Every launch runs through a battery of behavioral &amp; contract
-          signals; a single dangerous one (honeypot, pullable LP, mintable, serial deployer) caps the
-          composite to <strong>AVOID</strong> no matter how strong the momentum.
+      <div style={{ marginTop: 44 }}>
+        <h2 style={{ margin: "0 0 10px", fontSize: 20 }}>How the score works</h2>
+        <p style={{ color: C.dim, fontSize: 14, marginTop: 0, maxWidth: 720 }}>
+          Deterministic, no LLM. Every launch runs through 14+ behavioral &amp; contract signals; a
+          single dangerous one (honeypot, pullable LP, serial deployer, repeat offender) caps the
+          composite to <strong style={{ color: tierColor.AVOID }}>AVOID</strong> no matter the momentum.
         </p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 8 }}>
           {[
             ["Honeypot + tax", "buy/sell trade simulation"],
-            ["Deployer reputation", "serial-deployer & throwaway-wallet history"],
+            ["Deployer reputation", "serial-deployer + prior-token outcomes"],
+            ["Repeat-offender denylist", "wallets tied to rugs we caught"],
             ["Sniper / bundle", "supply grabbed in the opening blocks"],
             ["Funding cluster", "top holders funded from one source"],
             ["Graph centrality", "one wallet seeding many holders"],
@@ -130,15 +184,43 @@ GET /api/tokens/batch?addresses=0x..,0x..        → pre-screen up to 20 tokens 
           ))}
         </div>
         <p style={{ color: C.faint, fontSize: 12.5, marginTop: 10 }}>
-          Each launch returns the per-signal <code>checks[]</code> (pass/warn/fail/unknown) plus a{" "}
-          <code>safetyConfidence</code>, so you see <em>why</em> — not just a number.
+          Every launch returns the per-signal <code>checks[]</code> (pass/warn/fail/unknown) + a{" "}
+          <code>safetyConfidence</code> — see <em>why</em>, not just a number.
         </p>
       </div>
 
-      <p style={{ color: C.faint, fontSize: 12, marginTop: 24 }}>
-        Scores are a risk filter, not a guarantee — DYOR. Not financial advice.
+      {/* Track record callout */}
+      <a href="/caught" style={{ textDecoration: "none", display: "block", marginTop: 40 }}>
+        <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 14, padding: 22, display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 240 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: C.text }}>Receipts, not promises →</div>
+            <div style={{ color: C.dim, fontSize: 14, marginTop: 4 }}>
+              A public, timestamped record of launches we flagged <strong style={{ color: tierColor.AVOID }}>AVOID</strong>{" "}
+              that later rugged. Watch it fill.
+            </div>
+          </div>
+          <span style={{ color: C.accent, fontSize: 14, fontWeight: 600 }}>/caught</span>
+        </div>
+      </a>
+
+      <p style={{ color: C.faint, fontSize: 12, marginTop: 28 }}>
+        Scores are a risk filter, not a guarantee — DYOR. Not financial advice. ·{" "}
+        <a href={GH} style={link}>open source</a>
       </p>
     </main>
+  );
+}
+
+const link: React.CSSProperties = { color: "#9aa0a6", textDecoration: "none" };
+const btn: React.CSSProperties = { border: `1px solid ${C.line}`, color: C.text, textDecoration: "none", padding: "10px 16px", borderRadius: 10, fontSize: 14, fontWeight: 600 };
+const code: React.CSSProperties = { background: C.bg, border: `1px solid ${C.line}`, borderRadius: 10, padding: 14, overflowX: "auto", fontSize: 12.5, color: C.text, lineHeight: 1.5 };
+
+function Why({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 12, padding: "16px 18px" }}>
+      <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{title}</div>
+      <div style={{ color: C.dim, fontSize: 13.5, lineHeight: 1.5 }}>{children}</div>
+    </div>
   );
 }
 
