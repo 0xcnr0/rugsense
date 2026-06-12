@@ -1,0 +1,34 @@
+name: rug recheck
+
+# Keeps the public /caught track record fed on a tight cadence without paying for
+# a Vercel Pro plan. Vercel Hobby caps crons at once/day (see vercel.json, kept as
+# a fallback); this hits the same endpoint every 2h from free GitHub Actions.
+#
+# The endpoint is protected by CRON_SECRET on Vercel, so this sends a matching
+# Bearer header. Add a repo secret named CRON_SECRET equal to the Vercel value:
+#   gh secret set CRON_SECRET --repo 0xcnr0/rugsense
+
+on:
+  schedule:
+    - cron: "0 */2 * * *" # every 2 hours (UTC). GitHub may delay runs under load.
+  workflow_dispatch: {} # manual "Run workflow" button
+
+jobs:
+  recheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger /api/cron/recheck
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          code=$(curl -s -o /tmp/out.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "https://rugsense.xyz/api/cron/recheck")
+          echo "HTTP $code"
+          cat /tmp/out.json || true
+          echo
+          if [ "$code" != "200" ]; then
+            echo "::error::recheck failed with HTTP $code"
+            exit 1
+          fi
