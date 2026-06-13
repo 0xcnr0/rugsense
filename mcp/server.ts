@@ -26,6 +26,10 @@ const BASE_URL = (process.env.RADAR_URL || "https://rugsense.xyz/api/launches/la
 const FEED_URL = `${BASE_URL}/api/launches/latest`;
 const TOKEN_URL = (addr: string) => `${BASE_URL}/api/token/${addr}`;
 const BATCH_URL = `${BASE_URL}/api/tokens/batch`;
+const QUICK_URL = (addr: string) => `${BASE_URL}/api/quick/${addr}`;
+const WATCH_URL = (addr: string) => `${BASE_URL}/api/watch/${addr}`;
+const DEPLOYER_URL = (addr: string) => `${BASE_URL}/api/deployer/${addr}`;
+const TRACK_URL = `${BASE_URL}/api/track-record`;
 const PK = process.env.BUYER_PRIVATE_KEY;
 
 /** A fetch that auto-pays x402 when a buyer wallet is configured, else plain fetch. */
@@ -42,7 +46,7 @@ function makePayingFetch(): typeof globalThis.fetch {
 
 const payingFetch = makePayingFetch();
 
-const server = new McpServer({ name: "rugsense", version: "1.0.0" });
+const server = new McpServer({ name: "rugsense", version: "1.1.0" });
 
 const SIGNALS =
   "honeypot + buy/sell tax (trade simulation), mintable/blacklist/pausable + ownership, " +
@@ -114,6 +118,75 @@ server.registerTool(
     url.searchParams.set("addresses", addresses.join(","));
     return call(url.toString());
   },
+);
+
+server.registerTool(
+  "quick_check_base_token",
+  {
+    title: "Fast, cheap pre-screen of one Base token",
+    description:
+      "The high-frequency triage gate: a DexScreener-grade AVOID / WATCH / HOT score for one Base " +
+      "token, no onchain deep-dive — cheap and fast. Use it to filter many candidates, then " +
+      "deep-verify survivors with check_base_token. Pays $0.005 USDC via x402 (needs " +
+      "BUYER_PRIVATE_KEY). Invalid address / no-pool is not charged.",
+    inputSchema: {
+      address: z.string().regex(/^0x[a-fA-F0-9]{40}$/).describe("Base token contract address (0x + 40 hex)"),
+    },
+  },
+  async ({ address }) => call(QUICK_URL(address)),
+);
+
+server.registerTool(
+  "watch_base_token",
+  {
+    title: "Register a token for lifecycle webhook alerts (push, not pull)",
+    description:
+      "Register a Base token + your callback URL; for 7 days we re-score it and POST your callback " +
+      "the moment the verdict changes or a rug is in progress (liquidity collapse / pool removed). " +
+      "The continuous monitoring a single scored read can't give you — use it after you take a " +
+      "position to get an exit signal. Pays $0.05 USDC via x402 (needs BUYER_PRIVATE_KEY).",
+    inputSchema: {
+      address: z.string().regex(/^0x[a-fA-F0-9]{40}$/).describe("Base token contract address (0x + 40 hex)"),
+      callback: z.string().url().describe("HTTPS URL to receive webhook POSTs on tier change / rug-in-progress"),
+    },
+  },
+  async ({ address, callback }) => {
+    const url = new URL(WATCH_URL(address));
+    url.searchParams.set("callback", callback);
+    return call(url.toString());
+  },
+);
+
+server.registerTool(
+  "get_base_deployer_dossier",
+  {
+    title: "Accumulated dossier for a Base deployer wallet",
+    description:
+      "RugSense's proprietary, compounding record for a deployer wallet: every token we've seen it " +
+      "ship, prior-rug outcomes, first-seen date, and whether it's on the repeat-offender denylist " +
+      "we built from confirmed rugs. Pass a deployer EOA or a token address (we resolve its " +
+      "deployer). Data that can't be re-derived from a single free-API call. Pays $0.02 USDC via " +
+      "x402 (needs BUYER_PRIVATE_KEY). Unknown deployer returns found:false (still a useful answer).",
+    inputSchema: {
+      address: z.string().regex(/^0x[a-fA-F0-9]{40}$/).describe("Deployer EOA or token contract address (0x + 40 hex)"),
+    },
+  },
+  async ({ address }) => call(DEPLOYER_URL(address)),
+);
+
+server.registerTool(
+  "get_rugsense_track_record",
+  {
+    title: "RugSense's verifiable, point-in-time hit rate (free)",
+    description:
+      "The leakage-free scoreboard of every RugSense verdict: avoid.precisionPct = share of resolved " +
+      "AVOIDs that rugged; safe.cleanPct = share of resolved HOT/WATCH that did NOT rug. Every token " +
+      "was snapshotted at score time and graded strictly later, so the numbers can't be inflated by " +
+      "post-collapse data. Free (no payment). Call this to decide whether RugSense's signal is worth " +
+      "paying for before you wire up the paid tools.",
+    inputSchema: {},
+  },
+  async () => call(TRACK_URL),
 );
 
 /** Shared: pay-and-fetch a Radar URL, returning an MCP tool result. */

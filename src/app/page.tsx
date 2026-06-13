@@ -1,5 +1,6 @@
 import { getRecentBaseLaunchPairs } from "@/lib/dexscreener";
 import { scoreLaunches } from "@/lib/scoring";
+import { getScoreboard } from "@/lib/rugwatch";
 import type { ScoredLaunch, Tier } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -17,11 +18,12 @@ export default async function Home() {
   // Fast (DexScreener-only) scoring for the public teaser — keeps the page snappy.
   // The full onchain assessment (incl. deployer reputation + the proprietary
   // repeat-offender denylist) is the paid API's value, not given away free here.
-  const launches = scoreLaunches(await getRecentBaseLaunchPairs(15)).sort(
-    (a, b) => b.composite - a.composite,
-  );
+  const [launchPairs, board] = await Promise.all([getRecentBaseLaunchPairs(15), getScoreboard()]);
+  const launches = scoreLaunches(launchPairs).sort((a, b) => b.composite - a.composite);
   const counts = { HOT: 0, WATCH: 0, AVOID: 0 } as Record<Tier, number>;
   launches.forEach((l) => (counts[l.tier] += 1));
+  const avoidPrec = board.avoid.precisionPct;
+  const safeClean = board.safe.cleanPct;
 
   return (
     <main style={{ maxWidth: 960, margin: "0 auto", padding: "28px 20px 64px" }}>
@@ -40,34 +42,45 @@ export default async function Home() {
 
       {/* Hero */}
       <h1 style={{ margin: 0, fontSize: 38, lineHeight: 1.15, maxWidth: 760 }}>
-        Don&apos;t let your agent buy a fresh launch <span style={{ color: C.accent }}>blind</span>.
+        The launch-lifecycle risk desk for Base — with a <span style={{ color: C.accent }}>verifiable</span> hit rate.
       </h1>
-      <p style={{ color: C.text, fontSize: 18, lineHeight: 1.5, maxWidth: 700, marginTop: 16 }}>
-        RugSense scores every freshly-launched Base token into one machine-actionable{" "}
-        <strong style={{ color: tierColor.AVOID }}>AVOID</strong> /{" "}
-        <strong style={{ color: tierColor.WATCH }}>WATCH</strong> /{" "}
-        <strong style={{ color: tierColor.HOT }}>HOT</strong> decision your agent can gate on —
-        with a transparent per-signal breakdown. One x402 call. No keys, no signup.
+      <p style={{ color: C.text, fontSize: 18, lineHeight: 1.5, maxWidth: 720, marginTop: 16 }}>
+        Any agent can run a honeypot check. RugSense does what a freshly-prompted agent can&apos;t:
+        catches the <strong>~35% of rugs that have no code-level risk</strong> via wallet-behavior
+        signals, follows every call to its outcome for a <strong>leakage-free track record</strong>,
+        and <strong>pushes you a webhook</strong> when a position turns. One x402 call. No keys, no signup.
       </p>
-      <div style={{ display: "flex", gap: 10, marginTop: 20, flexWrap: "wrap" }}>
+
+      {/* Verifiable scoreboard strip */}
+      <a href="/caught" style={{ textDecoration: "none", display: "block", marginTop: 18 }}>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <ScoreChip label="AVOID precision" value={avoidPrec === null ? "warming up" : `${avoidPrec}%`} color={tierColor.AVOID} sub={`${board.avoid.rugged}/${board.avoid.resolved} resolved rugged`} />
+          <ScoreChip label="HOT/WATCH stayed clean" value={safeClean === null ? "warming up" : `${safeClean}%`} color={C.green} sub={`${board.safe.survived}/${board.safe.resolved} survived`} />
+          <ScoreChip label="Verdicts resolved" value={String(board.totalResolved)} color={C.text} sub="point-in-time, graded later →" />
+        </div>
+      </a>
+
+      <div style={{ display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap" }}>
         <a href="#agents" style={{ ...btn, background: C.accent, color: "#0b0d12", borderColor: C.accent }}>Add to your agent →</a>
-        <a href="/caught" style={btn}>See the rugs we caught</a>
+        <a href="/caught" style={btn}>See the track record</a>
       </div>
 
       {/* Why different */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 12, marginTop: 40 }}>
-        <Why title="One decision, not a toolbox">
-          Others hand you 19 tools or 30 disconnected checks. RugSense returns the single thing an
-          agent needs: a composite + <code>AVOID/WATCH/HOT</code> + calibrated confidence to{" "}
-          <code>if</code> on.
+        <Why title="Catches code-clean rugs">
+          ~35% of rugs have <em>no</em> code-level risk — pure unlocked-liquidity pulls a honeypot
+          check misses entirely. RugSense reads wallet behavior: funding clusters, sniper bundles,
+          graph centrality, deployer history.
         </Why>
-        <Why title="Deterministic & transparent">
-          No LLM, no hallucinations. Same input → same score, every time — with the per-signal{" "}
-          <code>checks[]</code> so you (and your users) see <em>why</em>.
+        <Why title="A hit rate you can audit">
+          Every verdict is snapshotted at score time and graded <em>strictly later</em> — no
+          hindsight inflation. The precision numbers are public at <code>/api/track-record</code> and{" "}
+          <code>/api/history</code>.
         </Why>
-        <Why title="A moat that compounds">
-          A proprietary repeat-offender wallet denylist, grown from rugs <em>we catch</em>. When a
-          deployer&apos;s prior tokens rugged, the next launch is flagged before it does.
+        <Why title="Push, not pull + a moat that compounds">
+          Register a token and we <code>webhook</code> you the moment it turns. And a proprietary
+          repeat-offender denylist, grown from rugs <em>we catch</em> — the next launch by a known
+          rugger is flagged before it pulls.
         </Why>
       </div>
 
@@ -130,13 +143,19 @@ export default async function Home() {
 }`}
         </pre>
         <p style={{ color: C.dim, fontSize: 13, margin: "10px 0 4px" }}>
-          Three tools: <code>get_base_launches</code> · <code>check_base_token</code> ·{" "}
-          <code>check_base_tokens_batch</code>. Or call the HTTP API directly:
+          Seven tools — <code>get_base_launches</code>, <code>check_base_token</code>,{" "}
+          <code>quick_check_base_token</code>, <code>check_base_tokens_batch</code>,{" "}
+          <code>watch_base_token</code>, <code>get_base_deployer_dossier</code>,{" "}
+          <code>get_rugsense_track_record</code>. Or call the HTTP API directly:
         </p>
         <pre style={code}>
-{`GET /api/launches/latest?tier=HOT&minSafety=60   → ranked scored feed       $0.03
-GET /api/token/{address}                         → deep-score one token      $0.03
-GET /api/tokens/batch?addresses=0x..,0x..        → pre-screen up to 20        $0.10`}
+{`GET /api/quick/{address}                         → fast pre-screen one token  $0.005
+GET /api/token/{address}                         → deep-score one token       $0.03
+GET /api/tokens/batch?addresses=0x..,0x..        → pre-screen up to 20         $0.10
+GET /api/launches/latest?tier=HOT&minSafety=60   → ranked scored feed          $0.03
+GET /api/watch/{address}?callback=https://..     → webhook on tier change/rug  $0.05
+GET /api/deployer/{address}                      → accumulated deployer dossier $0.02
+GET /api/track-record   ·   GET /api/history     → verifiable hit rate          free`}
         </pre>
         <p style={{ color: C.dim, fontSize: 13, margin: "10px 0 4px" }}>How an agent gates on it:</p>
         <pre style={code}>
@@ -214,6 +233,16 @@ swap();  // only HOT/WATCH with enough confidence`}
 const link: React.CSSProperties = { color: "#9aa0a6", textDecoration: "none" };
 const btn: React.CSSProperties = { border: `1px solid ${C.line}`, color: C.text, textDecoration: "none", padding: "10px 16px", borderRadius: 10, fontSize: 14, fontWeight: 600 };
 const code: React.CSSProperties = { background: C.bg, border: `1px solid ${C.line}`, borderRadius: 10, padding: 14, overflowX: "auto", fontSize: 12.5, color: C.text, lineHeight: 1.5 };
+
+function ScoreChip({ label, value, color, sub }: { label: string; value: string; color: string; sub: string }) {
+  return (
+    <div style={{ flex: 1, minWidth: 170, background: C.card, border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 14px" }}>
+      <div style={{ color: C.faint, fontSize: 11.5 }}>{label}</div>
+      <div style={{ fontSize: 22, fontWeight: 800, color }}>{value}</div>
+      <div style={{ color: C.faint, fontSize: 11, marginTop: 1 }}>{sub}</div>
+    </div>
+  );
+}
 
 function Why({ title, children }: { title: string; children: React.ReactNode }) {
   return (

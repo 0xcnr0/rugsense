@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getTrackRecord, type RugCatch } from "@/lib/rugwatch";
+import { getTrackRecord, getScoreboard, type RugCatch } from "@/lib/rugwatch";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -21,7 +21,9 @@ export const metadata: Metadata = {
 };
 
 export default async function Caught() {
-  const tr = await getTrackRecord(60);
+  const [tr, board] = await Promise.all([getTrackRecord(60), getScoreboard()]);
+  const avoidPrec = board.avoid.precisionPct;
+  const safeClean = board.safe.cleanPct;
 
   return (
     <main style={{ maxWidth: 820, margin: "0 auto", padding: "32px 20px 64px", color: C.text }}>
@@ -30,18 +32,26 @@ export default async function Caught() {
         <span style={{ color: C.faint, fontSize: 13 }}>track record</span>
       </div>
 
-      <h1 style={{ fontSize: 28, margin: "16px 0 6px" }}>Rugs we caught</h1>
-      <p style={{ color: C.dim, fontSize: 15, maxWidth: 640, marginTop: 0 }}>
-        Every launch below was scored <strong style={{ color: C.red }}>AVOID</strong> by RugSense{" "}
-        <em>at the timestamp shown</em> — then later rugged (liquidity drained or pool removed).
-        Receipts, not promises.
+      <h1 style={{ fontSize: 28, margin: "16px 0 6px" }}>Verifiable track record</h1>
+      <p style={{ color: C.dim, fontSize: 15, maxWidth: 660, marginTop: 0 }}>
+        Every verdict below was snapshotted <em>at the moment we scored it</em> and graded{" "}
+        <strong>strictly afterward</strong> — so these numbers can&rsquo;t be inflated by hindsight.
+        Point-in-time receipts, not promises. <a href="/api/track-record" style={{ color: C.accent }}>JSON</a> ·{" "}
+        <a href="/api/history" style={{ color: C.accent }}>backtest log</a>.
       </p>
 
-      {/* Headline stats */}
-      <div style={{ display: "flex", gap: 10, margin: "18px 0 22px" }}>
+      {/* Verifiable hit rate */}
+      <div style={{ display: "flex", gap: 10, margin: "18px 0 12px", flexWrap: "wrap" }}>
+        <Stat label="AVOID precision" value={avoidPrec === null ? "—" : `${avoidPrec}%`} color={C.red} sub={`${board.avoid.rugged}/${board.avoid.resolved} resolved rugged`} />
+        <Stat label="HOT/WATCH clean" value={safeClean === null ? "—" : `${safeClean}%`} color="#23c562" sub={`${board.safe.survived}/${board.safe.resolved} survived`} />
+        <Stat label="Verdicts resolved" value={board.totalResolved} sub="followed to outcome" />
+      </div>
+
+      {/* Catch counts */}
+      <div style={{ display: "flex", gap: 10, margin: "0 0 22px", flexWrap: "wrap" }}>
         <Stat label="Rugs caught" value={tr.caughtCount} color={C.red} />
         <Stat label="Flagged AVOID" value={tr.flaggedCount} />
-        <Stat label="Watching now" value={tr.watchingCount} muted />
+        <Stat label="Watching now" value={tr.watchingCount + board.safe.watching} muted />
       </div>
 
       {tr.catches.length === 0 ? (
@@ -66,11 +76,12 @@ export default async function Caught() {
   );
 }
 
-function Stat({ label, value, color, muted }: { label: string; value: number; color?: string; muted?: boolean }) {
+function Stat({ label, value, color, muted, sub }: { label: string; value: number | string; color?: string; muted?: boolean; sub?: string }) {
   return (
-    <div style={{ flex: 1, background: C.card, border: `1px solid ${C.line}`, borderRadius: 10, padding: "12px 14px" }}>
+    <div style={{ flex: 1, minWidth: 150, background: C.card, border: `1px solid ${C.line}`, borderRadius: 10, padding: "12px 14px" }}>
       <div style={{ color: C.faint, fontSize: 12 }}>{label}</div>
       <div style={{ fontSize: 26, fontWeight: 800, color: color ?? (muted ? C.dim : C.text) }}>{value}</div>
+      {sub ? <div style={{ color: C.faint, fontSize: 11, marginTop: 2 }}>{sub}</div> : null}
     </div>
   );
 }

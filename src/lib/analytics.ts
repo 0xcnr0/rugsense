@@ -38,8 +38,8 @@ export async function redisExec(commands: string[][]): Promise<{ result: unknown
   }
 }
 
-/** Record one paid API call (endpoint = "feed" | "token"), with the tiers served. */
-export function trackCall(endpoint: "feed" | "token", tiers: string[] = []): void {
+/** Record one paid API call (endpoint = "feed" | "token" | "quick" | "batch" | "deployer" | "watch"), with the tiers served. */
+export function trackCall(endpoint: string, tiers: string[] = []): void {
   const day = new Date().toISOString().slice(0, 10);
   const cmds: string[][] = [
     ["INCR", "calls:total"],

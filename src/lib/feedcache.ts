@@ -1,6 +1,7 @@
 import { getRecentBaseLaunchPairs } from "./dexscreener";
 import { scoreLaunchesOnchain } from "./scoring";
 import { recordCandidates } from "./rugwatch";
+import { recordDeployers } from "./deployerstore";
 import type { ScoredLaunch } from "./types";
 
 // Short-TTL cache for the scored launch feed. The heavy work (onchain discovery +
@@ -23,9 +24,10 @@ export async function getCachedFeed(now: number = Date.now()): Promise<{ launche
       const pairs = await getRecentBaseLaunchPairs(SIZE);
       const launches = await scoreLaunchesOnchain(pairs);
       cache = { at: Date.now(), launches };
-      // Snapshot AVOID-with-rug-reason launches for the public track record
-      // (fire-and-forget; no-op without analytics creds).
+      // Snapshot launches for the track record + scoreboard, and accumulate the
+      // deployer dossier graph (both fire-and-forget; no-op without analytics creds).
       recordCandidates(launches);
+      recordDeployers(launches);
       return launches;
     })().finally(() => {
       inflight = null;

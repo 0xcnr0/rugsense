@@ -1,7 +1,7 @@
 {
   "name": "rugsense-mcp",
-  "version": "1.0.0",
-  "description": "MCP server for RugSense — score freshly-launched Base tokens (rug/honeypot risk → AVOID/WATCH/HOT) over x402. Tools: get_base_launches, check_base_token, check_base_tokens_batch.",
+  "version": "1.1.0",
+  "description": "MCP server for RugSense — score freshly-launched Base tokens (rug/honeypot risk → AVOID/WATCH/HOT) over x402, with a verifiable point-in-time track record, lifecycle webhook alerts, and an accumulating deployer dossier. Tools: get_base_launches, check_base_token, check_base_tokens_batch, quick_check_base_token, watch_base_token, get_base_deployer_dossier, get_rugsense_track_record.",
   "type": "module",
   "bin": {
     "rugsense-mcp": "dist/server.js"

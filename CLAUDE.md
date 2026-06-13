@@ -85,13 +85,19 @@ TOKEN endpoint uses route-level `withX402` (settles on success → 404 not charg
 - [ ] Human storefront polish (Free vs Pro, clear call-to-action).
 - [ ] Farcaster mini-app (MiniKit) + daily "today's HOT / filtered rugs" content.
 
-## Endpoints (all x402 v2, USDC on Base)
+## Endpoints (paid = x402 v2 USDC on Base; two are free)
 - `GET /api/launches/latest` — ranked scored feed ($0.03, paymentProxy middleware)
 - `GET /api/token/{address}` — deep-score one token incl. Etherscan deployer/cluster + reputation ($0.03, withX402)
+- `GET /api/quick/{address}` — fast DexScreener-grade pre-screen, no onchain deep-dive ($0.005, withX402) — high-frequency triage tier
 - `GET /api/tokens/batch?addresses=…` — feed-grade score up to 20 tokens ($0.10, withX402)
-- MCP (`mcp/server.ts`): `get_base_launches`, `check_base_token`, `check_base_tokens_batch` (3 tools, x402-paying). **Published to npm → `npx -y rugsense-mcp`** (v1.0.0 live; `mcp/package.json` + `mcp/smithery.yaml`, `mcp/dist` gitignored, built on publish)
-- Free human surfaces: `/` landing, `/t/[address]` report, `/caught` track record
-- Distribution: rich OpenAPI (`/openapi.json`) + Bazaar metadata; AgentKit/LangChain snippets in `docs/INTEGRATE.md`
+- `GET /api/watch/{address}?callback=…` — register 7-day lifecycle monitoring; webhook POST on tier-change / rug-in-progress ($0.05, withX402). Engine: `src/lib/watchalerts.ts`, drained by the cron via `runWatchAlerts`
+- `GET /api/deployer/{address}` — accumulated deployer dossier (tokens shipped, prior-rug outcomes, first-seen, denylist) ($0.02, withX402). Store: `src/lib/deployerstore.ts` (`recordDeployers` from feed + token route)
+- `GET /api/track-record` — **FREE** verifiable point-in-time hit rate (scoreboard). Leakage-free by construction
+- `GET /api/history` — **FREE** leakage-free backtest log of resolved verdicts (filter by verdict/outcome)
+- MCP (`mcp/server.ts`, **v1.1.0**): `get_base_launches`, `check_base_token`, `quick_check_base_token`, `check_base_tokens_batch`, `watch_base_token`, `get_base_deployer_dossier`, `get_rugsense_track_record` (7 tools, x402-paying). **npm → `npx -y rugsense-mcp`** (`mcp/package.json` + `mcp/smithery.yaml`, `mcp/dist` gitignored, built on publish — bump + republish for v1.1.0)
+- **The moat (post-research):** behavioral signals catch the ~35% of rugs with no code-level risk; the **verifiable leakage-free track record** (rugwatch logs EVERY verdict pre-event, grades strictly later → `getScoreboard`/`getResolvedOutcomes`) is the one axis a freshly-prompted agent + free APIs can't reproduce. Full analysis: `docs/AGENT-DEMAND-RESEARCH.md`
+- Free human surfaces: `/` landing, `/t/[address]` report, `/caught` track record (now shows the verifiable scoreboard)
+- Distribution: rich OpenAPI (`/openapi.json`) + Bazaar metadata; curation outreach + content plan in `docs/DISTRIBUTION.md`; AgentKit/LangChain snippets in `docs/INTEGRATE.md`
 
 ## Run
 ```bash

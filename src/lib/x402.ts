@@ -29,3 +29,14 @@ export const X402_PRICE = `$${process.env.X402_PRICE || "0.03"}`;
 // Batch endpoint: one flat price for up to N tokens (cheaper per-token than singles,
 // to reward pre-screening a watchlist in one call).
 export const X402_BATCH_PRICE = `$${process.env.X402_BATCH_PRICE || "0.10"}`;
+// Quick check: a cheap, fast, DexScreener-only feed-grade score for a single token —
+// the high-frequency entry tier that competes with sub-cent rivals and keeps steady
+// call volume flowing (Bazaar delists after 30 days idle). Upsell to /api/token for
+// the Etherscan-deep deployer/cluster verify.
+export const X402_QUICK_PRICE = `$${process.env.X402_QUICK_PRICE || "0.005"}`;
+// Lifecycle watch: one-time fee to register a token for monitoring; we POST a webhook
+// on a tier change / rug-in-progress for the watch window. Stickiness, not a one-shot read.
+export const X402_WATCH_PRICE = `$${process.env.X402_WATCH_PRICE || "0.05"}`;
+// Deployer dossier: the accumulated, proprietary wallet-reputation record for one
+// deployer (history + denylist status) — data that compounds and can't be re-derived.
+export const X402_DEPLOYER_PRICE = `$${process.env.X402_DEPLOYER_PRICE || "0.02"}`;

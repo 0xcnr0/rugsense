@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { recheckWatched } from "@/lib/rugwatch";
+import { recheckWatched, recheckOutcomes } from "@/lib/rugwatch";
+import { runWatchAlerts } from "@/lib/watchalerts";
 import { getCachedFeed } from "@/lib/feedcache";
 
 export const dynamic = "force-dynamic";
@@ -26,8 +27,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const feed = await getCachedFeed();
     discovered = feed.launches.length;
   } catch {
-    /* discovery is best-effort; still run the confirm pass */
+    /* discovery is best-effort; still run the confirm passes */
   }
+  // CONFIRM passes: public-catch lane (AVOIDs), then the scoreboard lane (HOT/WATCH
+  // outcomes), then deliver lifecycle webhooks to anyone watching a token.
   const result = await recheckWatched(40);
-  return NextResponse.json({ ok: true, discovered, ...result, at: new Date().toISOString() });
+  const outcomes = await recheckOutcomes(40);
+  const alerts = await runWatchAlerts(40);
+  return NextResponse.json({ ok: true, discovered, ...result, outcomes, alerts, at: new Date().toISOString() });
 }

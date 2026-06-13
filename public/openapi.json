@@ -3,7 +3,7 @@
   "info": {
     "title": "RugSense",
     "version": "1.0.0",
-    "description": "Rug/honeypot risk + scored intelligence for freshly-launched Base tokens. Each token gets one machine-actionable AVOID/WATCH/HOT decision with a 0-100 composite, a calibrated safetyConfidence, and transparent per-signal checks[] — deterministic, no LLM. Signals: honeypot + buy/sell tax (trade simulation), mintable/blacklist/pausable + ownership, owner-mutable trade-control latent-honeypot, holder concentration, sniper/bundle supply, funding-source wallet clusters, transaction-graph centrality, serial-deployer reputation, a repeat-offender wallet denylist built from rugs we've caught, and LP burn/lock + duration (Uniswap v2 + v3). Each call is paid per-request over x402 v2 (USDC on Base) — no API keys, no signup. An unpaid request returns HTTP 402 with an x402 v2 payment challenge (PAYMENT-REQUIRED header); pay and retry. See docs/INTEGRATE.md.",
+    "description": "The launch-lifecycle risk desk for Base, with a public, verifiable hit rate. Each freshly-launched token gets one machine-actionable AVOID/WATCH/HOT decision (0-100 composite, calibrated safetyConfidence, transparent per-signal checks[]) — deterministic, no LLM. What a freshly-prompted agent + free scanners can't reproduce: (1) behavioral signals that catch the ~35% of rugs with no code-level risk — funding-source wallet clusters, sniper/bundle supply, transaction-graph centrality, serial-deployer reputation, and a repeat-offender wallet denylist built from rugs we've confirmed; (2) a leakage-free, point-in-time track record (every verdict snapshotted at score time, graded strictly later) at GET /api/track-record and GET /api/history; (3) push lifecycle alerts via GET /api/watch; (4) an accumulating deployer dossier at GET /api/deployer. Snapshot signals also include honeypot + buy/sell tax (trade sim), mintable/blacklist/pausable + ownership, owner-mutable latent-honeypot, holder concentration, and LP burn/lock + duration (Uniswap v2 + v3). Paid endpoints settle per-request over x402 v2 (USDC on Base) — no API keys, no signup; an unpaid request returns HTTP 402 with an x402 challenge (pay and retry). /api/track-record and /api/history are free. See docs/INTEGRATE.md.",
     "contact": { "url": "https://rugsense.xyz" }
   },
   "servers": [{ "url": "https://rugsense.xyz" }],
@@ -55,6 +55,79 @@
           "404": { "description": "None of the addresses resolved to a Base pool" }
         }
       }
+    },
+    "/api/quick/{address}": {
+      "get": {
+        "operationId": "quickCheckToken",
+        "summary": "Fast, cheap pre-screen for one Base token ($0.005)",
+        "description": "The high-frequency triage gate: a DexScreener-grade AVOID/WATCH/HOT score for one token, no onchain/Etherscan deep-dive. Use it to filter many candidates fast, then deep-verify survivors with /api/token. Settles only on success (invalid address 400 / no pool 404 not charged).",
+        "parameters": [
+          { "name": "address", "in": "path", "required": true, "schema": { "type": "string", "pattern": "^0x[a-fA-F0-9]{40}$" }, "description": "Base token contract address" }
+        ],
+        "responses": {
+          "200": { "description": "Quick-scored token", "content": { "application/json": { "schema": { "type": "object", "properties": { "chain": { "type": "string" }, "generatedAt": { "type": "string" }, "token": { "$ref": "#/components/schemas/ScoredLaunch" }, "notes": { "type": "array", "items": { "type": "string" } } } } } } },
+          "400": { "description": "Invalid address" },
+          "402": { "$ref": "#/components/responses/PaymentRequired" },
+          "404": { "description": "No DEX pair found for this token on Base" }
+        }
+      }
+    },
+    "/api/watch/{address}": {
+      "get": {
+        "operationId": "registerWatch",
+        "summary": "Register a token for lifecycle webhook alerts ($0.05, 7 days)",
+        "description": "Push, not pull. Register a token + callback URL; we re-score it on our schedule for 7 days and POST your callback the moment the verdict changes or a rug is in progress (liquidity collapse / pool removed). The continuous monitoring a single scored read can't give you. Settles only on success (bad address 400 / no pool 404 / missing callback 400 not charged).",
+        "parameters": [
+          { "name": "address", "in": "path", "required": true, "schema": { "type": "string", "pattern": "^0x[a-fA-F0-9]{40}$" }, "description": "Base token contract address" },
+          { "name": "callback", "in": "query", "required": true, "schema": { "type": "string", "format": "uri" }, "description": "HTTPS URL to receive webhook POSTs ({event,address,symbol,prevTier,tier,liquidityUsd,dropPct,reason,firedAt})" }
+        ],
+        "responses": {
+          "200": { "description": "Watch registered", "content": { "application/json": { "schema": { "type": "object", "properties": { "registered": { "type": "boolean" }, "id": { "type": "string" }, "address": { "type": "string" }, "tier": { "$ref": "#/components/schemas/Tier" }, "expiresAt": { "type": "string" }, "delivers": { "type": "array", "items": { "type": "string" } } } } } } },
+          "400": { "description": "Invalid address or missing/invalid callback" },
+          "402": { "$ref": "#/components/responses/PaymentRequired" },
+          "404": { "description": "No DEX pair found for this token on Base" }
+        }
+      }
+    },
+    "/api/deployer/{address}": {
+      "get": {
+        "operationId": "getDeployerDossier",
+        "summary": "Accumulated deployer dossier ($0.02)",
+        "description": "Our proprietary, compounding record for a deployer wallet: every token we've seen it ship, prior-rug outcomes, first-seen date, and repeat-offender denylist status. Pass a deployer EOA or a token address (we resolve its deployer). Data that grows with our operation — not re-derivable from a single free-API call. An unknown deployer returns 200 with found:false.",
+        "parameters": [
+          { "name": "address", "in": "path", "required": true, "schema": { "type": "string", "pattern": "^0x[a-fA-F0-9]{40}$" }, "description": "Deployer EOA or token contract address" }
+        ],
+        "responses": {
+          "200": { "description": "Deployer dossier (found:false when no history on file)", "content": { "application/json": { "schema": { "type": "object", "properties": { "chain": { "type": "string" }, "generatedAt": { "type": "string" }, "dossier": { "$ref": "#/components/schemas/DeployerDossier" }, "notes": { "type": "array", "items": { "type": "string" } } } } } } },
+          "400": { "description": "Invalid address" },
+          "402": { "$ref": "#/components/responses/PaymentRequired" }
+        }
+      }
+    },
+    "/api/track-record": {
+      "get": {
+        "operationId": "getTrackRecord",
+        "summary": "Verifiable point-in-time hit rate (FREE)",
+        "description": "The leakage-free scoreboard of every RugSense verdict: avoid.precisionPct = share of resolved AVOIDs that rugged; safe.cleanPct = share of resolved HOT/WATCH that did NOT rug. Every token was snapshotted at score time and graded strictly later, so the numbers can't be inflated by post-collapse data. Free — the proof that makes the paid endpoints worth buying.",
+        "responses": {
+          "200": { "description": "Scoreboard + recent confirmed catches", "content": { "application/json": { "schema": { "type": "object", "properties": { "scoreboard": { "$ref": "#/components/schemas/Scoreboard" }, "recentCatches": { "type": "array", "items": { "type": "object" } }, "notes": { "type": "array", "items": { "type": "string" } } } } } } }
+        }
+      }
+    },
+    "/api/history": {
+      "get": {
+        "operationId": "getHistory",
+        "summary": "Leakage-free backtest log of resolved verdicts (FREE)",
+        "description": "Every verdict that has resolved to a terminal outcome (rugged vs survived), with the call timestamp and time-to-resolve. Each row was snapshotted at score time and graded strictly later. Verify the signal is worth paying for, with no data leakage.",
+        "parameters": [
+          { "name": "verdict", "in": "query", "schema": { "type": "string", "enum": ["HOT", "WATCH", "AVOID"] }, "description": "Filter by the verdict made" },
+          { "name": "outcome", "in": "query", "schema": { "type": "string", "enum": ["rugged", "survived"] }, "description": "Filter by terminal outcome" },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 200, "default": 100 }, "description": "Max rows" }
+        ],
+        "responses": {
+          "200": { "description": "Resolved-outcome history + scoreboard", "content": { "application/json": { "schema": { "type": "object", "properties": { "scoreboard": { "$ref": "#/components/schemas/Scoreboard" }, "count": { "type": "integer" }, "history": { "type": "array", "items": { "$ref": "#/components/schemas/ResolvedOutcome" } } } } } } }
+        }
+      }
     }
   },
   "components": {
@@ -99,6 +172,57 @@
           "count": { "type": "integer" },
           "notes": { "type": "array", "items": { "type": "string" } },
           "launches": { "type": "array", "items": { "$ref": "#/components/schemas/ScoredLaunch" } }
+        }
+      },
+      "TierOutcome": {
+        "type": "object",
+        "properties": {
+          "resolved": { "type": "integer" },
+          "rugged": { "type": "integer" },
+          "survived": { "type": "integer" }
+        }
+      },
+      "Scoreboard": {
+        "type": "object",
+        "description": "Leakage-free, point-in-time hit rate. precisionPct/cleanPct are null until enough verdicts resolve.",
+        "properties": {
+          "avoid": { "type": "object", "description": "AVOID outcomes + ruggedWithin72h, watching, precisionPct (share of resolved AVOIDs that rugged)" },
+          "safe": { "type": "object", "description": "HOT+WATCH outcomes + watching, cleanPct (share of resolved HOT/WATCH that did NOT rug)" },
+          "byTier": { "type": "object", "description": "Per-tier TierOutcome for AVOID, WATCH, HOT" },
+          "totalResolved": { "type": "integer" },
+          "updatedAt": { "type": "string" }
+        }
+      },
+      "ResolvedOutcome": {
+        "type": "object",
+        "properties": {
+          "address": { "type": "string" },
+          "symbol": { "type": "string" },
+          "verdict": { "$ref": "#/components/schemas/Tier" },
+          "topFlag": { "type": "string" },
+          "outcome": { "type": "string", "enum": ["rugged", "survived"] },
+          "scoredAt": { "type": "number", "description": "ms epoch — when we made the call" },
+          "resolvedAt": { "type": "number", "description": "ms epoch — when the outcome was observed (strictly later)" },
+          "hoursToResolve": { "type": "number" },
+          "liqAtScore": { "type": "number" },
+          "liqAtResolve": { "type": "number" },
+          "dropPct": { "type": "number" }
+        }
+      },
+      "DeployerDossier": {
+        "type": "object",
+        "properties": {
+          "found": { "type": "boolean" },
+          "deployer": { "type": "string" },
+          "queried": { "type": "string" },
+          "riskLevel": { "type": "string", "enum": ["high", "elevated", "low", "unknown"] },
+          "onDenylist": { "type": "boolean", "description": "true → this wallet deployed a rug we confirmed" },
+          "denylistReason": { "type": ["string", "null"] },
+          "tokensSeen": { "type": "integer", "description": "distinct tokens we've observed from this deployer" },
+          "tokens": { "type": "array", "items": { "type": "string" } },
+          "firstSeen": { "type": ["string", "null"] },
+          "lastSeen": { "type": ["string", "null"] },
+          "snapshot": { "type": ["object", "null"], "description": "latest scan facts: deployments, ageDays, priorTokens, priorRugged" }
         }
       }
     }
