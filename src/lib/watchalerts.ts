@@ -60,13 +60,39 @@ const parse = <T>(v: unknown): T | null => {
   try { return JSON.parse(v) as T; } catch { return null; }
 };
 
-function validCallback(url: string): boolean {
-  try {
-    const u = new URL(url);
-    return u.protocol === "https:" || u.protocol === "http:";
-  } catch {
-    return false;
+// SSRF guard: we POST to this URL from our server, so block anything that could point at
+// internal/cloud-metadata targets. Require https, and reject private/reserved hosts. We
+// also set redirect:"manual" on delivery so a 3xx can't bounce us inward post-validation.
+// (Residual DNS-rebinding risk is accepted for a $0 serverless app; this covers the common
+// vectors.)
+function isPrivateIPv4(host: string): boolean {
+  const m = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (!m) return false;
+  const a = Number(m[1]), b = Number(m[2]);
+  if (a > 255 || b > 255) return true; // malformed → treat as unsafe
+  if (a === 0 || a === 10 || a === 127) return true; // this-network, private, loopback
+  if (a === 169 && b === 254) return true; // link-local incl. cloud metadata 169.254.169.254
+  if (a === 172 && b >= 16 && b <= 31) return true; // private
+  if (a === 192 && b === 168) return true; // private
+  if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
+  return false;
+}
+
+export function validCallback(url: string): boolean {
+  let u: URL;
+  try { u = new URL(url); } catch { return false; }
+  if (u.protocol !== "https:") return false; // public webhooks must be https
+  const host = u.hostname.toLowerCase().replace(/^\[|\]$/g, ""); // strip IPv6 brackets
+  if (
+    host === "localhost" || host === "0.0.0.0" || host === "::1" ||
+    host.endsWith(".local") || host.endsWith(".internal") || host === "metadata.google.internal"
+  ) return false;
+  if (host.includes(":")) {
+    // IPv6 literal — block loopback / link-local / unique-local.
+    if (host === "::1" || host.startsWith("fe80") || host.startsWith("fc") || host.startsWith("fd")) return false;
   }
+  if (isPrivateIPv4(host)) return false;
+  return true;
 }
 
 /**
@@ -83,7 +109,7 @@ export async function registerWatch(
   now: number = Date.now(),
 ): Promise<RegisterResult> {
   const addr = address.toLowerCase();
-  if (!validCallback(url)) return { ok: false, address: addr, error: "callback must be a valid http(s) URL" };
+  if (!validCallback(url)) return { ok: false, address: addr, error: "callback must be a valid public https URL (no private/internal hosts)" };
   if (!analyticsEnabled) {
     // No store configured → can't monitor. Be honest rather than silently accept.
     return { ok: false, address: addr, error: "watch store not configured on this deployment" };
@@ -125,6 +151,7 @@ async function postWebhook(url: string, payload: unknown): Promise<boolean> {
       headers,
       body,
       cache: "no-store",
+      redirect: "manual", // don't let a 3xx bounce us toward an internal target (SSRF)
       signal: AbortSignal.timeout(5_000),
     });
     return res.ok;

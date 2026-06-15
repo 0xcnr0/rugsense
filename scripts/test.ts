@@ -6,6 +6,7 @@ import { getSniperActivity, sniperSignals, getGraphCentrality, centralitySignals
 import { fundingSignals, type FundingCluster } from "../src/lib/funding";
 import { durationSignal, PERMANENT, type LockDuration } from "../src/lib/lockduration";
 import { latentHoneypotSignal } from "../src/lib/safety";
+import { validCallback } from "../src/lib/watchalerts";
 import type { DexPair } from "../src/lib/types";
 
 // Lightweight deterministic test suite for the scoring engine (no network, no deps).
@@ -248,6 +249,20 @@ check("no controls → no signal", (() => {
   const s = latentHoneypotSignal(false, false);
   return s.scoreDelta === 0 && s.flag === null;
 })());
+
+console.log("watch callback SSRF guard");
+check("valid public https URL → ok", validCallback("https://hooks.example.com/rugsense"));
+check("http (not https) → rejected", !validCallback("http://hooks.example.com/x"));
+check("localhost → rejected", !validCallback("https://localhost/x"));
+check("cloud metadata 169.254.169.254 → rejected", !validCallback("https://169.254.169.254/latest/meta-data"));
+check("private 10.x → rejected", !validCallback("https://10.0.0.5/x"));
+check("private 192.168.x → rejected", !validCallback("https://192.168.1.10/x"));
+check("private 172.16-31 → rejected", !validCallback("https://172.20.0.1/x"));
+check("loopback 127.0.0.1 → rejected", !validCallback("https://127.0.0.1/x"));
+check(".internal host → rejected", !validCallback("https://db.internal/x"));
+check("IPv6 loopback ::1 → rejected", !validCallback("https://[::1]/x"));
+check("garbage → rejected", !validCallback("not a url"));
+check("public IPv4 → ok", validCallback("https://93.184.216.34/hook"));
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
