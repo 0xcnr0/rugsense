@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { getScoreboard, getTrackRecord } from "@/lib/rugwatch";
+import { rateLimit, rateHeaders, clientIp } from "@/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -12,7 +13,14 @@ export const maxDuration = 30;
 // This is the differentiator a freshly-prompted agent + free scanners cannot make:
 // an audited record of how our calls actually resolved. Free on purpose — it's the
 // proof that makes the paid endpoints worth buying. Lightly cached.
-export async function GET(): Promise<NextResponse> {
+export async function GET(req: NextRequest): Promise<NextResponse> {
+  const rl = await rateLimit("track-record", clientIp(req));
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "rate_limited", message: "Too many requests — slow down.", retryAfter: rl.retryAfter },
+      { status: 429, headers: rateHeaders(rl) },
+    );
+  }
   const [board, tr] = await Promise.all([getScoreboard(), getTrackRecord(20)]);
   return NextResponse.json(
     {

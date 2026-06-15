@@ -60,6 +60,8 @@ async function handler(req: NextRequest): Promise<NextResponse> {
       notes: [
         "We POST your callback with a JSON body {event,address,symbol,prevTier,tier,liquidityUsd,dropPct,reason,firedAt} " +
           "on a verdict change or rug-in-progress, for 7 days.",
+        "Webhooks are signed: verify HMAC_SHA256(secret, `${x-rugsense-timestamp}.${rawBody}`) == " +
+          "x-rugsense-signature (strip the 'sha256=' prefix) to confirm the call is from us.",
         "One-time fee covers the watch window. Not financial advice.",
       ],
     },

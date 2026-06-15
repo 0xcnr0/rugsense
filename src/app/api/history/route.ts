@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getResolvedOutcomes, getScoreboard } from "@/lib/rugwatch";
+import { rateLimit, rateHeaders, clientIp } from "@/lib/ratelimit";
 import type { Tier } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,13 @@ export const maxDuration = 30;
 //
 // Query: ?verdict=AVOID|WATCH|HOT  ?outcome=rugged|survived  ?limit=1-200 (default 100)
 export async function GET(req: NextRequest): Promise<NextResponse> {
+  const rl = await rateLimit("history", clientIp(req));
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "rate_limited", message: "Too many requests — slow down.", retryAfter: rl.retryAfter },
+      { status: 429, headers: rateHeaders(rl) },
+    );
+  }
   const sp = req.nextUrl.searchParams;
   const limit = Math.min(200, Math.max(1, Number(sp.get("limit")) || 100));
   const verdict = sp.get("verdict") as Tier | null;

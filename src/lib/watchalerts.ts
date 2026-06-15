@@ -1,3 +1,4 @@
+import { createHmac } from "crypto";
 import { redisExec, analyticsEnabled } from "./analytics";
 import { getPairsForToken, primaryPair } from "./dexscreener";
 import { scoreLaunch } from "./scoring";
@@ -103,10 +104,26 @@ export async function registerWatch(
 
 async function postWebhook(url: string, payload: unknown): Promise<boolean> {
   try {
+    const body = JSON.stringify(payload);
+    const headers: Record<string, string> = {
+      "content-type": "application/json",
+      "user-agent": "RugSense-Watch/1.0",
+    };
+    // Sign so the receiver can verify the call is really from us. Signature is over
+    // `${timestamp}.${body}` (timestamp guards against replay). Verify with:
+    //   HMAC_SHA256(WATCH_WEBHOOK_SECRET, `${x-rugsense-timestamp}.${rawBody}`)
+    //   === x-rugsense-signature.replace("sha256=","")
+    const secret = process.env.WATCH_WEBHOOK_SECRET;
+    if (secret) {
+      const ts = String(Math.floor(Date.now() / 1000));
+      const sig = createHmac("sha256", secret).update(`${ts}.${body}`).digest("hex");
+      headers["x-rugsense-timestamp"] = ts;
+      headers["x-rugsense-signature"] = `sha256=${sig}`;
+    }
     const res = await fetch(url, {
       method: "POST",
-      headers: { "content-type": "application/json", "user-agent": "RugSense-Watch/1.0" },
-      body: JSON.stringify(payload),
+      headers,
+      body,
       cache: "no-store",
       signal: AbortSignal.timeout(5_000),
     });

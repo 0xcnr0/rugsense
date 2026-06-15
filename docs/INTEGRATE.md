@@ -3,12 +3,18 @@
 Scored intelligence on freshly-launched Base tokens, one **x402** call. No API keys, no
 signup — the caller's wallet pays **$0.03 USDC** on Base per call.
 
-- **Endpoints:**
-  - `GET /api/launches/latest` — latest scored launches, ranked (Bazaar-discoverable). $0.03.
-  - `GET /api/token/{address}` — deep-score one token ("is this token safe?"). $0.03.
-  - `GET /api/tokens/batch?addresses=…` — batch-score up to 20 tokens (pre-screen a watchlist). $0.10.
+- **Paid endpoints (x402, USDC on Base):**
+  - `GET /api/quick/{address}` — fast DexScreener-grade pre-screen, no onchain deep-dive. **$0.005**.
+  - `GET /api/token/{address}` — deep-score one token ("is this token safe?"). **$0.03**.
+  - `GET /api/launches/latest` — latest scored launches, ranked (Bazaar-discoverable). **$0.03**.
+  - `GET /api/tokens/batch?addresses=…` — batch-score up to 20 tokens (pre-screen a watchlist). **$0.10**.
+  - `GET /api/watch/{address}?callback=…` — register 7-day lifecycle monitoring; webhook on tier-change / rug-in-progress. **$0.05**.
+  - `GET /api/deployer/{address}` — accumulated deployer dossier (history, prior-rug outcomes, denylist). **$0.02**.
+- **Free endpoints (no x402):**
+  - `GET /api/track-record` — verifiable, point-in-time hit rate (the scoreboard). Rate-limited per IP.
+  - `GET /api/history?verdict=&outcome=&limit=` — leakage-free backtest log of resolved verdicts. Rate-limited per IP.
 - **Protocol:** x402 v2 (network `eip155:8453`, USDC). Base URL `https://rugsense.xyz`.
-- **Machine-readable spec:** [`/openapi.json`](https://rugsense.xyz/openapi.json).
+- **Machine-readable spec:** [`/openapi.json`](https://rugsense.xyz/openapi.json) · **Agent card:** [`/.well-known/agent-card.json`](https://rugsense.xyz/.well-known/agent-card.json) (ERC-8004 / A2A).
 
 ## Query params
 | param | meaning |
@@ -53,6 +59,31 @@ Returns `{ count, requested, results: [{ address, scored, error? }] }`. Feed-gra
 per token — pre-screen a candidate set in one $0.10 call, then deep-verify survivors with
 `/api/token/{address}`. Charged only if at least one address resolves to a Base pool.
 
+## Lifecycle watch (push, not pull)
+```
+GET /api/watch/{address}?callback=https://your.app/hook    ($0.05, monitors 7 days)
+```
+We re-score the token on our schedule and POST your callback on a **tier change** or
+**rug-in-progress** (liquidity collapse / pool removed). Body:
+```jsonc
+{ "event": "rug_alert" | "tier_change", "address": "0x…", "symbol": "TKN",
+  "prevTier": "WATCH", "tier": "AVOID", "prevLiquidityUsd": 42000, "liquidityUsd": 1200,
+  "dropPct": 97, "reason": "liquidity −97%", "firedAt": "2026-…Z" }
+```
+**Verify the webhook is from us** (when `WATCH_WEBHOOK_SECRET` is configured): recompute
+`HMAC_SHA256(secret, \`${headers['x-rugsense-timestamp']}.${rawBody}\`)` and compare to
+`x-rugsense-signature` (strip the `sha256=` prefix). Reject if it doesn't match or the
+timestamp is stale.
+
+## Verify the track record before you pay (free)
+```
+GET /api/track-record     → { scoreboard: { avoid:{precisionPct,…}, safe:{cleanPct,…} }, … }
+GET /api/history?verdict=AVOID&outcome=rugged&limit=50    → resolved verdicts, graded after the fact
+```
+Every row was snapshotted at score time and graded strictly later — no leakage. Use it to
+confirm the signal is worth paying for. These are free but **rate-limited per IP** (HTTP 429
+with `retry-after` if you exceed it).
+
 ## 1. Unpaid request → see the price (any HTTP client)
 ```bash
 curl -i https://rugsense.xyz/api/launches/latest
@@ -79,15 +110,17 @@ The wallet needs USDC on Base. The `exact` scheme uses EIP-3009 (gasless for the
 A runnable version is in [`scripts/buyer-test.ts`](../scripts/buyer-test.ts).
 
 ## 3. As an MCP tool (Claude Desktop, Cursor, any MCP agent)
-The repo ships an MCP server exposing three tools — `get_base_launches`,
-`check_base_token`, `check_base_tokens_batch` — that handle x402 payment with the
-agent's wallet. Drop this into your MCP client config (one block):
+The repo ships an MCP server (`rugsense-mcp`, v1.1.0) exposing seven tools —
+`get_base_launches`, `check_base_token`, `quick_check_base_token`,
+`check_base_tokens_batch`, `watch_base_token`, `get_base_deployer_dossier`, and the free
+`get_rugsense_track_record` — that handle x402 payment with the agent's wallet. Drop this
+into your MCP client config (one block):
 ```jsonc
 {
   "mcpServers": {
     "rugsense": {
       "command": "npx",
-      "args": ["-y", "tsx", "/abs/path/to/mcp/server.ts"],
+      "args": ["-y", "rugsense-mcp"],
       "env": { "BUYER_PRIVATE_KEY": "0x<a Base wallet funded with USDC>" }
     }
   }
@@ -109,7 +142,7 @@ from langgraph.prebuilt import create_react_agent
 # session = an MCP ClientSession connected to the rugsense server
 tools = await load_mcp_tools(session)
 agent = create_react_agent(model, tools)
-# the agent now has get_base_launches / check_base_token / check_base_tokens_batch
+# the agent now has all 7 rugsense tools (quick/deep/feed/batch/watch/deployer/track-record)
 ```
 
 ## Gating pattern (how an agent should use this)

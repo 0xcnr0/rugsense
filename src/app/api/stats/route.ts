@@ -30,21 +30,43 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     "calls:total",
     "calls:feed",
     "calls:token",
+    "calls:quick",
+    "calls:batch",
+    "calls:watch",
+    "calls:deployer",
     `calls:day:${day}`,
     "tier:HOT",
     "tier:WATCH",
     "tier:AVOID",
   ]);
-  const price = Number(process.env.X402_PRICE || "0.03");
+  // Per-endpoint price (env-overridable, mirrors src/lib/x402.ts defaults).
+  const priceFor: Record<string, number> = {
+    feed: Number(process.env.X402_PRICE || "0.03"),
+    token: Number(process.env.X402_PRICE || "0.03"),
+    quick: Number(process.env.X402_QUICK_PRICE || "0.005"),
+    batch: Number(process.env.X402_BATCH_PRICE || "0.10"),
+    watch: Number(process.env.X402_WATCH_PRICE || "0.05"),
+    deployer: Number(process.env.X402_DEPLOYER_PRICE || "0.02"),
+  };
+  const byEndpoint = {
+    feed: c["calls:feed"] ?? 0,
+    token: c["calls:token"] ?? 0,
+    quick: c["calls:quick"] ?? 0,
+    batch: c["calls:batch"] ?? 0,
+    watch: c["calls:watch"] ?? 0,
+    deployer: c["calls:deployer"] ?? 0,
+  };
+  const estRevenueUsd = +Object.entries(byEndpoint)
+    .reduce((sum, [k, n]) => sum + n * (priceFor[k] ?? 0), 0)
+    .toFixed(2);
 
   return NextResponse.json(
     {
       totalCalls: c["calls:total"] ?? 0,
-      feedCalls: c["calls:feed"] ?? 0,
-      tokenCalls: c["calls:token"] ?? 0,
+      callsByEndpoint: byEndpoint,
       callsToday: c[`calls:day:${day}`] ?? 0,
       tiersServed: { HOT: c["tier:HOT"] ?? 0, WATCH: c["tier:WATCH"] ?? 0, AVOID: c["tier:AVOID"] ?? 0 },
-      estRevenueUsd: +((c["calls:total"] ?? 0) * price).toFixed(2),
+      estRevenueUsd, // priced per-endpoint, not a flat rate
       generatedAt: new Date().toISOString(),
     },
     { headers: { "cache-control": "no-store" } },
