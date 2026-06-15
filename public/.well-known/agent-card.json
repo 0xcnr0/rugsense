@@ -1,0 +1,40 @@
+{
+  "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+  "name": "RugSense",
+  "description": "The launch-lifecycle risk desk for Base. Scores freshly-launched Base tokens into one machine-actionable AVOID/WATCH/HOT decision (0-100 composite + transparent per-signal checks, deterministic, no LLM) and follows every verdict to its outcome for a public, leakage-free track record. Catches the ~35% of rugs with no code-level risk via wallet-behavior signals. Paid per call over x402 (USDC on Base); free verifiable track record.",
+  "url": "https://rugsense.xyz",
+  "version": "1.1.0",
+  "provider": {
+    "organization": "RugSense",
+    "url": "https://rugsense.xyz"
+  },
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": true
+  },
+  "defaultInputModes": ["application/json"],
+  "defaultOutputModes": ["application/json"],
+  "endpoints": [
+    { "name": "web", "url": "https://rugsense.xyz" },
+    { "name": "openapi", "url": "https://rugsense.xyz/openapi.json" },
+    { "name": "mcp", "url": "https://www.npmjs.com/package/rugsense-mcp", "transport": "stdio", "install": "npx -y rugsense-mcp" }
+  ],
+  "skills": [
+    { "id": "quick_check", "name": "Quick token pre-screen", "description": "Fast DexScreener-grade AVOID/WATCH/HOT score for one Base token ($0.005, x402).", "tags": ["base", "token-safety", "rug-check", "triage"] },
+    { "id": "check_token", "name": "Deep token score", "description": "Full safety+momentum score for one Base token incl. honeypot sim, holder/LP, Etherscan deployer/cluster ($0.03, x402).", "tags": ["base", "token-safety", "honeypot", "deployer-reputation"] },
+    { "id": "launches_feed", "name": "Scored launch feed", "description": "Ranked feed of freshly-launched Base tokens with AVOID/WATCH/HOT decisions ($0.03, x402).", "tags": ["base", "new-pairs", "discovery"] },
+    { "id": "batch_check", "name": "Batch token score", "description": "Pre-screen up to 20 Base tokens in one call ($0.10, x402).", "tags": ["base", "watchlist"] },
+    { "id": "watch_token", "name": "Lifecycle watch", "description": "Register a token for 7-day monitoring; webhook on tier-change / rug-in-progress ($0.05, x402).", "tags": ["base", "webhook", "rug-alert", "monitoring"] },
+    { "id": "deployer_dossier", "name": "Deployer dossier", "description": "Accumulated reputation record for a deployer wallet incl. repeat-offender denylist ($0.02, x402).", "tags": ["base", "wallet-reputation", "deployer"] },
+    { "id": "track_record", "name": "Verifiable track record", "description": "Leakage-free, point-in-time hit rate of every verdict (FREE).", "tags": ["base", "track-record", "accuracy", "trust"] }
+  ],
+  "registrations": [],
+  "trustModels": ["feedback"],
+  "x-rugsense": {
+    "trackRecord": "https://rugsense.xyz/api/track-record",
+    "history": "https://rugsense.xyz/api/history",
+    "openapi": "https://rugsense.xyz/openapi.json",
+    "payment": { "protocol": "x402", "network": "eip155:8453", "asset": "USDC" },
+    "note": "registrations[] is populated after on-chain register() on the Base Identity Registry (0x8004A169FB4a3325136EB29fA0ceB6D2e539a432). Run scripts/register-8004.ts."
+  }
+}

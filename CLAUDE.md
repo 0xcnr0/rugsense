@@ -98,6 +98,7 @@ TOKEN endpoint uses route-level `withX402` (settles on success → 404 not charg
 - **The moat (post-research):** behavioral signals catch the ~35% of rugs with no code-level risk; the **verifiable leakage-free track record** (rugwatch logs EVERY verdict pre-event, grades strictly later → `getScoreboard`/`getResolvedOutcomes`) is the one axis a freshly-prompted agent + free APIs can't reproduce. Full analysis: `docs/AGENT-DEMAND-RESEARCH.md`
 - Free human surfaces: `/` landing, `/t/[address]` report, `/caught` track record (now shows the verifiable scoreboard)
 - Distribution: rich OpenAPI (`/openapi.json`) + Bazaar metadata; curation outreach + content plan in `docs/DISTRIBUTION.md`; AgentKit/LangChain snippets in `docs/INTEGRATE.md`
+- **ERC-8004 agent-trust stack (LIVE on Base, 150k+ agents — analysis in `docs/ERC-8004.md`):** L1 done = `/.well-known/agent-card.json` (free, makes us crawlable by 8004scan/RNWY/Agent0). L2 ready = `scripts/register-8004.ts` (one `register()` tx on Base Identity Registry `0x8004A169…`, cents of gas, needs a funded Base hot wallet — run it, then paste the printed `registrations[]` into the agent-card + redeploy). L3 deferred = on-chain token-risk validator (`validationResponse` is 0-100; build when agents actually send per-token validation requests). NOTE: this corrects the old "ERC-8004 = no proven demand, defer" stance — it's now live + adopted.
 
 ## Run
 ```bash

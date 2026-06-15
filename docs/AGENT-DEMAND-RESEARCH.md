@@ -76,6 +76,7 @@ price. The wedge must move to things a freshly-prompted agent + free APIs
 | 6 | **Backtest / point-in-time history endpoint** — `/api/history?from=…&tier=…` serving past scores as logged (never recomputed) | Lets agent devs *prove to themselves* the signal is worth paying for; leakage-free backtest data is something free APIs don't offer | Low (serve rugwatch snapshots) |
 | 7 | **Positioning rewrite** — from "token safety check" (commoditized) to **"the launch-lifecycle risk desk with a public, verifiable hit rate"**; lead every surface (landing, OpenAPI description, MCP tool descriptions, /caught) with the accuracy stats | Differentiates on the one axis rivals can't copy quickly: proof | ~0 (copy) |
 | 8 | *(later)* **Behavioral-signal emphasis in marketing** — publish a short "35% of rugs have no code risk — here's what code scanners miss" post with our funding-cluster/sniper signals as the answer; Farcaster distribution | Educates the market into our wedge; cites independent research | ~0 (content) |
+| 9 | **ERC-8004 presence** (new lane, June 2026) — the agent-trust stack (ERC-8004 identity + 8126 verification + 8183 commerce) is LIVE on Base (150k+ agents). L1: serve `/.well-known/agent-card.json` (free, done). L2: one `register()` tx on Base (cents, `scripts/register-8004.ts` ready). L3 (defer): on-chain token-risk validator. Full analysis: `docs/ERC-8004.md` | New discovery channel beyond Bazaar; our track record is the reputation signal that wins provider selection | L1 $0 / L2 cents |
 
 **Explicit non-goals (don't relitigate):** multi-chain expansion (GoPlus owns
 breadth; our edge is Base depth), ML scoring (deterministic + explainable is the
@@ -87,7 +88,7 @@ trust story), raw new-pairs feed (DexScreener owns it), price war below ~$0.005
 1. **Sprint A (trust):** #1 track record + #7 positioning + #4 quick tier — all
    cheap, all compounding, all visible on Agentic.Market.
 2. **Sprint B (stickiness):** #2 watch/webhooks + #3 reputation persistence.
-3. **Sprint C (conversion):** #6 backtest endpoint + #5 curation outreach + #8 content.
+3. **Sprint C (conversion):** #6 backtest endpoint + #5 curation outreach + #8 content + #9 L2 ERC-8004 on-chain register (when a Base gas wallet is ready). #9 L1 (agent-card) already shipped in Sprint A; #9 L3 (validator) stays a watch-item — trigger: agents reading per-token validation/attestations pre-swap.
 
 ## Key verified sources
 

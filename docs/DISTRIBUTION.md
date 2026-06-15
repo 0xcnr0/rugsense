@@ -31,6 +31,24 @@
 - [ ] Make `get_rugsense_track_record` the gateway tool in docs: it's free, so an agent
       can evaluate our hit rate before wiring a wallet — lowers the trust barrier.
 
+## 2b. ERC-8004 presence (new discovery channel — June 2026)
+
+The ERC-8004 agent-trust stack is live on Base (150k+ agents; identity + reputation +
+validation registries at `0x8004…`). Full analysis + cost/effort: `docs/ERC-8004.md`.
+
+- [x] **L1 (free, done):** serve `/.well-known/agent-card.json` — RugSense is now parseable
+      by ERC-8004 crawlers (8004scan, RNWY, Agent0 subgraph) and doubles as an A2A card.
+- [ ] **L2 (cents):** run `scripts/register-8004.ts` with a funded Base hot wallet → mints
+      our agent NFT in the Base Identity Registry. Then paste the printed `registrations[]`
+      into the agent-card and redeploy.
+- [ ] **L3 (defer):** on-chain token-risk validator (answer `validationResponse` 0-100).
+      Trigger: agents actually sending per-token validation requests. Until then it's gas +
+      infra with no consumer — keep output attestation-shaped so the lift stays small.
+
+Competitive note: RedStone/Credora hold the infra/risk-intelligence layer here. We don't
+out-breadth them — our edge stays Base-launch depth + the verifiable track record, which is
+the reputation signal that wins provider selection.
+
 ## 3. The positioning, everywhere
 
 One line, repeated on landing, OpenAPI description, MCP tool descriptions, /caught:
