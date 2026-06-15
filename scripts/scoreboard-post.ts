@@ -4,6 +4,8 @@
 //
 // Run: npx tsx scripts/scoreboard-post.ts        (override URL with RADAR_URL)
 
+export {}; // make this a module (isolates top-level consts from other scripts)
+
 const BASE = (process.env.RADAR_URL || "https://rugsense.xyz").replace(/\/$/, "");
 
 interface Tally { resolved: number; rugged: number; survived: number }

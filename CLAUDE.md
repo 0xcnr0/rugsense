@@ -80,10 +80,22 @@ TOKEN endpoint uses route-level `withX402` (settles on success → 404 not charg
   daily `/api/cron/recheck` confirms which rugged via liquidity collapse / pool removal;
   `vercel.json` cron, self-feeding: discovers+records then confirms). Uses existing
   Upstash/KV plumbing (no-op without creds). Optional `CRON_SECRET` env hardens the cron.
-- [ ] **Next:** confirm x402 Bazaar / Agentic.Market listing (auto after first CDP settle);
-  distribution (Farcaster daily content, MCP wrapper); optional per-IP rate limit; Free/Pro UI.
-- [ ] Human storefront polish (Free vs Pro, clear call-to-action).
-- [ ] Farcaster mini-app (MiniKit) + daily "today's HOT / filtered rugs" content.
+- [x] **Production hardening:** per-IP rate limit on the free endpoints (`src/lib/ratelimit.ts`,
+  Upstash-backed, fail-open, `RATE_LIMIT_RPM`); signed webhooks (HMAC over `${ts}.${body}` via
+  `x-rugsense-signature`/`-timestamp`, env `WATCH_WEBHOOK_SECRET`); `/api/stats` now counts all
+  endpoints with per-endpoint revenue.
+- [x] **Free/Pro storefront:** `/pricing` (`src/app/pricing/page.tsx`) — Free / Pay-per-call (x402) /
+  Pro (honest waitlist, no fake billing). Nav links added on landing.
+- [x] **Farcaster mini-app:** `/mini` (`src/app/mini/page.tsx`) mobile surface (scoreboard + today's
+  HOT/filtered), dynamic embed image (`src/app/mini/opengraph-image.tsx`, ImageResponse, asset-free),
+  `fc:miniapp`/`fc:frame` embed meta, manifest `public/.well-known/farcaster.json`. **USER TODO:**
+  sign `accountAssociation` with the Farcaster custody wallet for rugsense.xyz (Warpcast Developer
+  Domains / base.dev manifest tool) + paste it in; optionally swap the placeholder icon for a 200x200 PNG.
+- [x] **Calibration tooling:** `scripts/calibrate.ts` (rug rate per verdict/flag from `/api/history`,
+  n<30 anecdotal guard) + `docs/CALIBRATION.md`. Thresholds deliberately UNCHANGED (n too small).
+- [ ] **Next:** confirm x402 Bazaar / Agentic.Market listing (auto after first CDP settle); ERC-8004
+  L2 register (user, `scripts/register-8004.ts`); curation outreach + content (`docs/CONTENT.md`);
+  recalibrate scoring once `scripts/calibrate.ts` shows n≥30; wire daily/weekly content auto-poster.
 
 ## Endpoints (paid = x402 v2 USDC on Base; two are free)
 - `GET /api/launches/latest` — ranked scored feed ($0.03, paymentProxy middleware)

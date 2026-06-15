@@ -1,0 +1,29 @@
+{
+  "accountAssociation": {
+    "header": "",
+    "payload": "",
+    "signature": ""
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "RugSense",
+    "iconUrl": "https://rugsense.xyz/mini/opengraph-image",
+    "homeUrl": "https://rugsense.xyz/mini",
+    "imageUrl": "https://rugsense.xyz/mini/opengraph-image",
+    "buttonTitle": "Open RugSense",
+    "splashBackgroundColor": "#0b0d12",
+    "subtitle": "Scored Base launch radar",
+    "description": "Today's HOT Base launches + the rugs we filtered, with a public verifiable hit rate. AVOID/WATCH/HOT in one tap.",
+    "primaryCategory": "finance",
+    "tags": ["base", "tokens", "rug-check", "safety", "defi"]
+  },
+  "frame": {
+    "version": "1",
+    "name": "RugSense",
+    "iconUrl": "https://rugsense.xyz/mini/opengraph-image",
+    "homeUrl": "https://rugsense.xyz/mini",
+    "imageUrl": "https://rugsense.xyz/mini/opengraph-image",
+    "buttonTitle": "Open RugSense",
+    "splashBackgroundColor": "#0b0d12"
+  }
+}

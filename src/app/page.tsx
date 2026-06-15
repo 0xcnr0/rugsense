@@ -32,7 +32,8 @@ export default async function Home() {
         <span style={{ fontSize: 20, fontWeight: 800 }}>RugSense</span>
         <span style={{ color: C.faint, fontSize: 12.5 }}>live on Base</span>
         <div style={{ marginLeft: "auto", display: "flex", gap: 16, fontSize: 13.5, flexWrap: "wrap" }}>
-          <a href="/caught" style={link}>Rugs we caught</a>
+          <a href="/caught" style={link}>Track record</a>
+          <a href="/pricing" style={link}>Pricing</a>
           <a href="#agents" style={link}>For agents</a>
           <a href="/openapi.json" style={link}>API</a>
           <a href={NPM} style={link}>npm</a>

@@ -8,6 +8,8 @@
 // IMPORTANT: don't tune on a handful of points. The report tags confidence by sample
 // size; treat any signal with n < ~30 as anecdotal, not actionable.
 
+export {}; // make this a module (isolates top-level consts from other scripts)
+
 const BASE = (process.env.RADAR_URL || "https://rugsense.xyz").replace(/\/$/, "");
 const MIN_N = 30; // below this, per-bucket rates are anecdotal
 

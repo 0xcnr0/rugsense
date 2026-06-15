@@ -49,6 +49,20 @@ Competitive note: RedStone/Credora hold the infra/risk-intelligence layer here. 
 out-breadth them — our edge stays Base-launch depth + the verifiable track record, which is
 the reputation signal that wins provider selection.
 
+## 2c. Farcaster mini-app (shipped — needs one signing step)
+
+`/mini` is a mobile Base/Farcaster mini-app (scoreboard + today's HOT/filtered, links to
+reports). Embed meta (`fc:miniapp`/`fc:frame`) + dynamic image + manifest
+(`/.well-known/farcaster.json`) are live. To finish registration:
+
+- [ ] Sign `accountAssociation` with the Farcaster custody wallet that owns rugsense.xyz —
+      Warpcast → Settings → Developer → Domains, or the base.dev manifest generator — and
+      paste `header`/`payload`/`signature` into `public/.well-known/farcaster.json`, redeploy.
+- [ ] (optional) Replace the placeholder `iconUrl` (currently the OG image) with a dedicated
+      200×200 PNG.
+- [ ] Then share a cast linking `https://rugsense.xyz/mini` — it renders a "Open RugSense"
+      launch card. Pair with the `scripts/daily-content.ts` / `scripts/scoreboard-post.ts` output.
+
 ## 3. The positioning, everywhere
 
 One line, repeated on landing, OpenAPI description, MCP tool descriptions, /caught:
