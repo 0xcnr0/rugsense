@@ -12,8 +12,10 @@ import { assessSafety } from "./assess";
 //   composite     0-100  safety-gated blend
 //   tier          HOT | WATCH | AVOID
 //
-// Tunables live at the top so they can be recalibrated against real launches
-// (plan Faz 0b exit criterion: calibrate scores on real examples).
+// Tunables live at the top so they can be recalibrated against real launches.
+// Calibrate from EVIDENCE, not vibes: `scripts/calibrate.ts` reads the leakage-free
+// /api/history and reports rug rate per verdict/flag. Don't retune below n≈30 per bucket.
+// Methodology + current state: docs/CALIBRATION.md.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const CFG = {
