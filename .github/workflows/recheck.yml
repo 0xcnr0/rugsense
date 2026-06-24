@@ -4,6 +4,10 @@ name: rug recheck
 # a Vercel Pro plan. Vercel Hobby caps crons at once/day (see vercel.json, kept as
 # a fallback); this hits the same endpoint every 2h from free GitHub Actions.
 #
+# Targets the stable Vercel deployment URL (base-launch-radar.vercel.app), NOT the
+# public custom domain — this is internal plumbing and must keep the track record
+# accruing even if the custom domain (rugsense.xyz) has a DNS/registrar issue.
+#
 # The endpoint is protected by CRON_SECRET on Vercel, so this sends a matching
 # Bearer header. Add a repo secret named CRON_SECRET equal to the Vercel value:
 #   gh secret set CRON_SECRET --repo 0xcnr0/rugsense
@@ -22,9 +26,9 @@ jobs:
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          code=$(curl -s -o /tmp/out.json -w "%{http_code}" \
+          code=$(curl -s -o /tmp/out.json -w "%{http_code}" --max-time 60 \
             -H "Authorization: Bearer ${CRON_SECRET}" \
-            "https://rugsense.xyz/api/cron/recheck")
+            "https://base-launch-radar.vercel.app/api/cron/recheck")
           echo "HTTP $code"
           cat /tmp/out.json || true
           echo
