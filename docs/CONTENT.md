@@ -19,6 +19,12 @@ CDP team via their developer Discord / the Agentic.Market "submit/curate" path).
 > The launch-lifecycle risk desk for Base — scores every freshly-launched token
 > AVOID/WATCH/HOT in one x402 call, with a public, verifiable hit rate.
 
+**Current proof point** (snapshot — re-run `npx tsx scripts/scoreboard-post.ts` for the
+latest before sending; numbers grow as the cron resolves more):
+> As of writing, across 31 point-in-time-graded verdicts our AVOID precision is **78%**
+> — i.e. 78% of the AVOIDs that have resolved actually rugged, measured only on outcomes
+> observed *after* the call. Verify live: https://rugsense.xyz/api/track-record
+
 **Why curate us (the pitch):**
 > Most token-safety services sell *a check*. RugSense is the only one that publishes a
 > leakage-free, point-in-time track record of how its calls actually resolved
